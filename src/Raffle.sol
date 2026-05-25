@@ -21,7 +21,7 @@
 // internal & private view & pure functions
 // external & public view & pure functions
 
-// SPDX-License-Identifier: SEE LICENSE IN LICENSE
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
@@ -46,7 +46,11 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__NeedMoreETHToEnterRaffle(); // custom errors - because they are gas efficient instead of require as it needs to store stings for require statement
     error Raffle__TranferFailedToWinner();
     error Raffle__raffleNotInOpenState();
-    error Raffle__checkUpKeepNotTrue(uint256 balance, uint256 length, uint256 state); // custom erros and passing arguments when we are reverted with custom error we can understand more with the arguments
+    error Raffle__checkUpKeepNotTrue(
+        uint256 balance,
+        uint256 length,
+        uint256 state
+    ); // custom erros and passing arguments when we are reverted with custom error we can understand more with the arguments
 
     // good naming convention for errors is contractname__nameofthecustomerror
 
@@ -121,7 +125,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     // when should the winner be picked
     /**
-      * @dev This is the finction that chainlink nodes will call to see if the raffle lottery is ready to be have a winner picked
+     * @dev This is the finction that chainlink nodes will call to see if the raffle lottery is ready to be have a winner picked
      * The following should be true in order for upkeepNeeded to be true:
      * 1) The time interval has passed between raffle runs
      * 2) the lottery is in open state
@@ -135,31 +139,40 @@ contract Raffle is VRFConsumerBaseV2Plus {
     )
         public
         view
-        returns (bool upkeepNeeded, bytes memory /* performData */) // upkeepNeeded should be true if the winner is picked
+        returns (
+            bool upkeepNeeded,
+            bytes memory /* performData */ // upkeepNeeded should be true if the winner is picked
+        )
     {
-
-        bool timeHaspassed = ((block.timestamp - s_lastTimeStamp) >= i_intervalRaffleDuration); 
+        bool timeHaspassed = ((block.timestamp - s_lastTimeStamp) >=
+            i_intervalRaffleDuration);
         bool raffleIsOpen = s_raffleState == RaffleState.OPEN;
         bool hasBalance = address(this).balance > 0;
         bool hasPlayers = s_rafflePlayers.length > 0;
-        upkeepNeeded = timeHaspassed && raffleIsOpen && hasBalance && hasPlayers;
+        upkeepNeeded =
+            timeHaspassed &&
+            raffleIsOpen &&
+            hasBalance &&
+            hasPlayers;
         return (upkeepNeeded, "");
     }
 
     // This function should be called automactically - chainlink automation (time based) - where we have checkUpkeep and performUpkeep functions
-    function performUpkeep(
-    bytes calldata /* performData */
-  ) external {
+    function performUpkeep(bytes calldata /* performData */) external {
         // 1. Get a random number
         // 2. Use Random number to pick a player
         // 3. Be automactically called after some given time to pick a winner
 
         // check to see if enough time has passed
         // everytime a winner is picked we want to update s_lastTimeStamp
-        
+
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
-            revert Raffle__checkUpKeepNotTrue(address(this).balance, s_rafflePlayers.length, uint256(s_raffleState)); // custom error and revert with arguments
+            revert Raffle__checkUpKeepNotTrue(
+                address(this).balance,
+                s_rafflePlayers.length,
+                uint256(s_raffleState)
+            ); // custom error and revert with arguments
         }
         // if enough time has happened we need to get an random number from Chainlink
 
@@ -228,5 +241,14 @@ contract Raffle is VRFConsumerBaseV2Plus {
     function getentranceFee() external view returns (uint256) {
         return i_entranceFee;
     }
-}
 
+    function getRaffleState() external view returns (RaffleState) {
+        return s_raffleState;
+    }
+
+    function getPlayersAddress(
+        uint256 IndexOfPlayer
+    ) external view returns (address) {
+        return s_rafflePlayers[IndexOfPlayer];
+    }
+}
