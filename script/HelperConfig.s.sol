@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {VRFCoordinatorV2_5Mock} from "../lib/chainlink-evm/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol"; // Mock for VRFCoordinator
+import {LinkToken} from "../test/mocks/LinkToken.sol"; // Mock for LINK token
 
 abstract contract ConstantVariablesAndErrors {
     uint256 public constant SEPOLIA_CHAIN_ID = 11155111;
@@ -23,6 +24,7 @@ contract HelperConfig is Script, ConstantVariablesAndErrors {
         bytes32 gasLane;
         uint64 subscriptionId;
         uint32 callbackGasLimit;
+        address link;
     }
 
     NetworkConfig public activeNetworkConfig;
@@ -57,7 +59,8 @@ contract HelperConfig is Script, ConstantVariablesAndErrors {
                 vrfCoordinator: 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE, // Sepolia VRF Coordinator
                 gasLane: 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71, // Sepolia Gas Lane for 30 Gwei keyHash
                 callbackGasLimit: 500000, // 500,000 gas
-                subscriptionId: 0 // To be set after creating a subscription
+                subscriptionId: 0, // To be set after creating a subscription
+                link: 0x779877A7B0D9E8603169DdbD7836e478b4624789 // for Sepolia, the LINK token address is 0x779877A7B0D9E8603169DdbD7836e478b4624789 which is the address of the LINK token on Sepolia, and it is used for funding the subscription with LINK tokens when we are on the Sepolia network. This address is important because it allows us to interact with the LINK token contract to transfer LINK tokens to our subscription, which is necessary for paying for VRF requests.
             });
     }
 
@@ -76,6 +79,7 @@ contract HelperConfig is Script, ConstantVariablesAndErrors {
             MOCK_GAS_PRICE_LINK,
             MOCK_WEI_PER_UNIT_LINK
         );
+        LinkToken linkTokenMock = new LinkToken();
         // MOCK_BASE_FEE - On a live network, Chainlink charges a specific amount of LINK (or native gas like ETH/BNB depending on the version and network) just to kickstart the request.
         // MOCK_GAS_PRICE_LINK - gas to broadcast a transaction that calls your fulfillRandomWords function
         // MOCK_WEI_PER_UNIT_LINK - In a real network, Chainlink nodes need to convert gas costs (which are paid in the network's native token like ETH) into the amount of LINK it will charge your subscription.
@@ -87,7 +91,8 @@ contract HelperConfig is Script, ConstantVariablesAndErrors {
             vrfCoordinator: address(vrfCoordinatorMock), // Sepolia VRF Coordinator
             gasLane: 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71, // Sepolia Gas Lane for 30 Gwei keyHash, does not matter for mock
             callbackGasLimit: 500000, // 500,000 gas
-            subscriptionId: 0 // To be set after creating a subscription
+            subscriptionId: 0, // To be set after creating a subscription
+            link: address(linkTokenMock) // for local testing, we can set the LINK token address to the mock address
         });
 
         return activeNetworkConfig;
