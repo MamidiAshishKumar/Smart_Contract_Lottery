@@ -17,7 +17,7 @@ contract RaffleUnitTest is Test {
     uint256 interval;
     address vrfCoordinator;
     bytes32 gasLane;
-    uint64 subscriptionId;
+    uint256 subscriptionId;
     uint32 callbackGasLimit;
 
     function setUp() external {
@@ -96,5 +96,63 @@ contract RaffleUnitTest is Test {
         // Now lets see if we are allowed to enter the raffle as performUpkeep is called because it sets raffle state to calculating
         vm.prank(PLAYER1);
         raffle.enterRaffle{value: entranceFee}();
+    }
+
+    function testCheckUpkeepReturnsFalseIfitHasNoBalance() public {
+        //Arrange
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+
+        // Act 
+        (bool upKeepNeeded, ) = raffle.checkUpkeep("");
+
+        // Assert
+        assert(upKeepNeeded == false);
+    }
+
+    function testCheckUpkeepReturnsFalseIfRaffleIsNotOpen() public {
+        // Arrange
+        vm.prank(PLAYER1);
+        raffle.enterRaffle{value: entranceFee}();
+
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        raffle.performUpkeep("");
+
+        // Act 
+        (bool upKeepNeeded, ) = raffle.checkUpkeep("");
+
+        // Assert
+        assert(upKeepNeeded == false);
+    }
+
+    function testCheckUpkeepReturnsFalseIfEnoughTimeHasNotPassed() public {
+        // Arrange
+        vm.prank(PLAYER1);
+        raffle.enterRaffle{value: entranceFee}();
+
+        vm.warp(block.timestamp + interval - 1); // we are warping to just before the interval time has passed
+        vm.roll(block.number + 1);
+
+        // Act 
+        (bool upKeepNeeded, ) = raffle.checkUpkeep("");
+
+        // Assert
+        assert(upKeepNeeded == false);
+    }
+
+    function testCheckUpkeepReturnsTrueWhenParametersAreGood() public {
+        // Arrange
+        vm.prank(PLAYER1);
+        raffle.enterRaffle{value: entranceFee}();
+
+        vm.warp(block.timestamp + interval + 1); // we are warping to just after the interval time has passed
+        vm.roll(block.number + 1);
+
+        // Act 
+        (bool upKeepNeeded, ) = raffle.checkUpkeep("");
+
+        // Assert
+        assert(upKeepNeeded == true);
     }
 }

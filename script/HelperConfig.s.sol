@@ -22,7 +22,7 @@ contract HelperConfig is Script, ConstantVariablesAndErrors {
         uint256 interval;
         address vrfCoordinator;
         bytes32 gasLane;
-        uint64 subscriptionId;
+        uint256 subscriptionId;
         uint32 callbackGasLimit;
         address link;
     }
@@ -59,7 +59,8 @@ contract HelperConfig is Script, ConstantVariablesAndErrors {
                 vrfCoordinator: 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE, // Sepolia VRF Coordinator
                 gasLane: 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71, // Sepolia Gas Lane for 30 Gwei keyHash
                 callbackGasLimit: 500000, // 500,000 gas
-                subscriptionId: 0, // To be set after creating a subscription
+                subscriptionId: 28592074708583273352219067781964489274792608802409911943700683860328670467970, // To be set after creating a subscription
+                // error - Invalid type for argument in function call. Invalid implicit conversion from int_const 2859...(69 digits omitted)...7970 to uint64 requested. Literal is too large to fit in uint64.? what is the fix because the subscription ID is real?
                 link: 0x779877A7B0D9E8603169DdbD7836e478b4624789 // for Sepolia, the LINK token address is 0x779877A7B0D9E8603169DdbD7836e478b4624789 which is the address of the LINK token on Sepolia, and it is used for funding the subscription with LINK tokens when we are on the Sepolia network. This address is important because it allows us to interact with the LINK token contract to transfer LINK tokens to our subscription, which is necessary for paying for VRF requests.
             });
     }
@@ -94,6 +95,8 @@ contract HelperConfig is Script, ConstantVariablesAndErrors {
             subscriptionId: 0, // To be set after creating a subscription
             link: address(linkTokenMock) // for local testing, we can set the LINK token address to the mock address
         });
+
+        // can we use VrfCoordinator and Linktoken mock to interact with those contracts if we deployed the contracts to real testnet sepolia? 
 
         return activeNetworkConfig;
     }

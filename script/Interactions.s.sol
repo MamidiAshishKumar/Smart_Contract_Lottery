@@ -2,12 +2,13 @@
 pragma solidity 0.8.19;
 
 import {Script, console} from "forge-std/Script.sol";
-import {HelperConfig, ConstantVariablesAndErrors} from "./HelperConfig.s.sol";
+import {HelperConfig} from "./HelperConfig.s.sol";
 import {VRFCoordinatorV2_5Mock} from "../lib/chainlink-evm/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol"; // Mock for VRFCoordinator
-import {LinkToken} from "../test/mocks/LinkToken.sol"; // Mock for LINK token
+import {LinkToken} from "../test/mocks/LinkToken.sol"; // Mock for ERC20 LINK token
+import {DevOpsTools} from "lib/foundry-devops/src/DevOpsTools.sol";
 
 contract CreateSubscription is Script {
-    function createSubscriptionUsingConfig() public returns (uint64, address) {
+    function createSubscriptionUsingConfig() public returns (uint256, address) {
         // what is createSubscriptionUsingConfig? This function can be implemented to interact with the VRF Coordinator Mock to create a new subscription and return its ID. It uses the HelperConfig to get the VRF Coordinator address, which allows it to work seamlessly on both local and Sepolia networks without hardcoding any addresses. The function will create a subscription on the VRF Coordinator Mock and return the subscription ID along with the VRF Coordinator address for further interactions, such as funding the subscription with fake LINK tokens.
         // This function can be implemented to interact with the VRF Coordinator Mock to create a new subscription and return its ID
 
@@ -17,18 +18,18 @@ contract CreateSubscription is Script {
 
         // create a subscription on the VRF Coordinator Mock and return the subscription ID...
 
-        (uint64 subscriptionId, ) = createSubscription(vrfCoordinator);
+        (uint256 subscriptionId, ) = createSubscription(vrfCoordinator);
         return (subscriptionId, vrfCoordinator);
     }
 
     function createSubscription(
         address vrfCoordinator
-    ) public returns (uint64, address) {
+    ) public returns (uint256, address) {
         // This function can be implemented to interact with the VRF Coordinator Mock to create a new subscription and return its ID
         console.log("Creating Subscription on chainID:", block.chainid);
         vm.startBroadcast();
         // Interact with the VRF Coordinator Mock contract to create a subscription and return the subscription
-        uint64 subscriptionId = uint64(
+        uint256 subscriptionId = uint256(
             VRFCoordinatorV2_5Mock(vrfCoordinator).createSubscription()
         );
         vm.stopBroadcast();
@@ -60,6 +61,7 @@ contract FundSubscription is Script {
     }
 
     function fundSubscription(address vrfCoordinator, uint256 subscriptionId, address linkTokenAddress) public {
+        uint256 LOCAL_CHAIN_ID = 31337;
         // why we need vrfCoordinator address? Because we need to interact with the VRF Coordinator Mock contract to fund the subscription with fake LINK tokens, and we need the address of the VRF Coordinator Mock contract to do that. The vrfCoordinator address allows us to call the appropriate functions on the VRF Coordinator Mock contract to transfer fake LINK tokens to our subscription, which is necessary for paying for VRF requests in our local testing environment.
         console.log("Funding Subscription with ID:", subscriptionId, "on chainID:", block.chainid);
         console.log("Using VrfCoordinator at address:", vrfCoordinator);
@@ -72,9 +74,17 @@ contract FundSubscription is Script {
             vm.stopBroadcast();
             console.log("Subscription funded with", FUND_AMOUNT, "fake LINK tokens.");
         }
-        else {
+        // else {
+            vm.startBroadcast();
+            LinkToken(linkTokenAddress).transferAndCall( // we will learn later about ERC 20 tokens
+                vrfCoordinator,
+                FUND_AMOUNT,
+                abi.encode(subscriptionId)
+            );
+        //     // vm.stopBroadcast();
+        //     // For funding the subscription with LINK tokens using the above LINK Contract address, we need to have LINK tokens in our account to transfer to the VRF Coordinator. Since we are on Sepolia, we can obtain testnet LINK tokens from a faucet. Once we have the testnet LINK tokens in our account, we can use the transferAndCall function of the LinkToken contract to transfer the specified amount of LINK tokens to the VRF Coordinator's address, along with the subscription ID encoded in the data parameter. This will fund our subscription on the Sepolia network, allowing us to pay for VRF requests when we run our Raffle contract.
 
-        }
+        // }
     }
 
 
@@ -82,4 +92,32 @@ contract FundSubscription is Script {
         // This function can be implemented to interact with the VRF Coordinator Mock to fund an existing subscription with fake LINK tokens
         fundSubscriptionUsingConfig();
     }
+}
+
+contract addConsumer is Script {
+    function addConsumerUsingConfig(address raffleContractAddress) public {
+        HelperConfig helperConfig = new HelperConfig();
+        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator; // get the VRF Coordinator address from the helper config
+        uint256 subscriptionId = helperConfig.getConfig().subscriptionId; // get the subscription ID from the helper config
+        addConsumerToSubscriptionId(raffleContractAddress, vrfCoordinator, subscriptionId);
+    }
+
+    function addConsumerToSubscriptionId(address raffleContractAddress, address vrfCoordinator, uint256 subscriptionId) public {
+        console.log("Adding consumer contract as a consumer to the VRF subscription...");
+        console.log("Raffle Contract Address:", raffleContractAddress);
+        console.log("VRF Coordinator Address:", vrfCoordinator);
+        console.log("Subscription ID:", subscriptionId);
+
+        vm.startBroadcast();
+        VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(subscriptionId, raffleContractAddress);
+        vm.stopBroadcast();
+
+        console.log("Raffle contract added as a consumer to the VRF subscription successfully.");
+    }
+    
+    function run() public {
+        address mostRecentlyDeployedRaffleContract = DevOpsTools.get_most_recent_deployment("Raffle", block.chainid);
+        addConsumerUsingConfig(mostRecentlyDeployedRaffleContract);
+    }
+
 }

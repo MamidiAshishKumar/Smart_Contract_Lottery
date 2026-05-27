@@ -4,10 +4,12 @@ pragma solidity ^0.8.19;
 import {Script} from "forge-std/Script.sol";
 import {Raffle} from "../src/Raffle.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-import {CreateSubscription} from "./Interactions.s.sol";
+import {CreateSubscription, addConsumer} from "./Interactions.s.sol";
 
 contract DeployRaffle is Script {
-    function run() public {}
+    function run() public {
+        deployRaffle();
+    }
 
     function deployRaffle() public returns (Raffle, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
@@ -23,7 +25,7 @@ contract DeployRaffle is Script {
             // Update the subscriptionId in the helperConfig with the new subscription ID
 
             // Fund the subscription with fake LINK tokens (this can be implemented to interact with the VRF Coordinator Mock contract to fund the subscription with fake LINK tokens)
-
+            // we already funded with UI
 
         }
 
@@ -37,6 +39,13 @@ contract DeployRaffle is Script {
             config.callbackGasLimit
         );
         vm.stopBroadcast();
+
+        // Add Consumer contract to Vrf
+        addConsumer addConsumerScript = new addConsumer();
+        // Dont need to broadcast here because we are already broadcasting in the addConsumer script
+        addConsumerScript.addConsumerToSubscriptionId(address(raffleContract), config.vrfCoordinator, config.subscriptionId);
+
+
 
         return (raffleContract, helperConfig);
     }
